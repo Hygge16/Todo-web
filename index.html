@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Taskboard</title>
+  <style>
+    :root {
+      --bg: #000;
+      --bg-card: #111;
+      --text: #fff;
+      --muted: #888;
+      --border: #333;
+      --highlight: #00ff99;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+      background: linear-gradient(to bottom, var(--bg), #151515);
+      color: white;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+
+    .add-task {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .add-task input {
+      flex: 1;
+      font-size: 1.1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: white;
+    }
+
+    .add-task button {
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      border: none;
+      background: white;
+      color: black;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-task button:hover {
+      background: #e5e5e5;
+    }
+
+    .progress-container {
+      margin-bottom: 2rem;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .progress-bar {
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--highlight);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 0.3rem;
+    }
+
+    .task-board {
+      display: flex;
+      gap: 2rem;
+      width: 100%;
+      max-width: 1000px;
+      justify-content: center;
+    }
+
+    .column {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      min-height: 200px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.03);
+    }
+
+    .column h2 {
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      color: var(--muted);
+    }
+
+    .task {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .task:last-child {
+      border-bottom: none;
+    }
+
+    .task label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .task input[type='checkbox'] {
+      transform: scale(1.2);
+    }
+
+    .task.done span {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    .task span {
+      flex: 1;
+    }
+
+    .task button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .task button:hover {
+      color: red;
+    }
+
+    .task input.editing {
+      background: #000;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      width: 100%;
+      padding: 0.3rem 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .task-board {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Taskboard</h1>
+
+  <div class="add-task">
+    <input type="text" id="taskInput" placeholder="What do you need to do?" />
+    <button onclick="addTask()">Add</button>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText">0 / 0 completed</div>
+  </div>
+
+  <div class="task-board">
+    <div class="column" id="todoCol">
+      <h2>To-Do</h2>
+      <div id="todoList"></div>
+    </div>
+    <div class="column" id="doneCol">
+      <h2>Completed</h2>
+      <div id="doneList"></div>
+    </div>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+    function save() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      render();
+    }
+
+    function addTask() {
+      const input = document.getElementById('taskInput');
+      const text = input.value.trim();
+      if (text) {
+        tasks.push({ text, done: false });
+        input.value = '';
+        save();
+      }
+    }
+
+    function toggle(index) {
+      tasks[index].done = !tasks[index].done;
+      save();
+    }
+
+    function remove(index) {
+      tasks.splice(index, 1);
+      save();
+    }
+
+    function startEdit(span, i) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = span.textContent;
+      input.className = 'editing';
+      span.replaceWith(input);
+      input.focus();
+
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          tasks[i].text = input.value.trim();
+          save();
+        } else if (e.key === 'Escape') {
+          render();
+        }
+      };
+
+      input.onblur = () => render();
+    }
+
+    function render() {
+      const todoList = document.getElementById('todoList');
+      const doneList = document.getElementById('doneList');
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+
+      todoList.innerHTML = '';
+      doneList.innerHTML = '';
+
+      let doneCount = 0;
+
+      tasks.forEach((task, i) => {
+        const div = document.createElement('div');
+        div.className = 'task' + (task.done ? ' done' : '');
+
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.done;
+        checkbox.onchange = () => toggle(i);
+
+        const span = document.createElement('span');
+        span.textContent = task.text;
+        span.onclick = () => startEdit(span, i);
+
+        label.appendChild(checkbox);
+        label.appendChild(span);
+
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        del.onclick = () => remove(i);
+
+        div.appendChild(label);
+        div.appendChild(del);
+
+        (task.done ? doneList : todoList).appendChild(div);
+        if (task.done) doneCount++;
+      });
+
+      const total = tasks.length;
+      const percent = total ? (doneCount / total) * 100 : 0;
+      progressBar.style.width = percent + '%';
+      progressText.textContent = `${doneCount} / ${total} completed`;
+    }
+
+    render();
+  </script>
+</body>
+</html>
