@@ -1,155 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Tasks</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #000;
-      color: #fff;
-      margin: 0;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Trash2 } from 'lucide-react';
+
+export default function TodoDashboard() {
+  const [tasks, setTasks] = useState([]);
+  const [input, setInput] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('todo-list');
+    if (saved) setTasks(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('todo-list', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const addTask = () => {
+    if (input.trim() !== '') {
+      setTasks([...tasks, { text: input.trim(), done: false }]);
+      setInput('');
     }
+  };
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
+  const toggleTask = (index) => {
+    const updated = [...tasks];
+    updated[index].done = !updated[index].done;
+    setTasks(updated);
+  };
 
-    .input-area {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
+  const deleteTask = (index) => {
+    const updated = tasks.filter((_, i) => i !== index);
+    setTasks(updated);
+  };
 
-    input[type="text"] {
-      padding: 0.5rem;
-      font-size: 1rem;
-      width: 300px;
-    }
+  const completed = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-    button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      background: #222;
-      color: #fff;
-      border: 1px solid #555;
-      cursor: pointer;
-    }
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-black text-white p-8 space-y-10">
+      <h1 className="text-5xl font-semibold text-center tracking-tight text-white/90">Taskboard</h1>
 
-    .task-list {
-      width: 100%;
-      max-width: 400px;
-      background: #111;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      margin-bottom: 2rem;
-    }
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex gap-3">
+          <Input
+            placeholder="Add a task..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTask()}
+            className="bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500"
+          />
+          <Button onClick={addTask} className="bg-white text-black hover:bg-zinc-200 transition">Add</Button>
+        </div>
 
-    .task {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
+        <Card className="bg-zinc-900 border border-zinc-700 shadow-xl rounded-2xl">
+          <CardContent className="p-6 space-y-3">
+            {tasks.length === 0 ? (
+              <p className="text-zinc-500 text-center">No tasks yet.</p>
+            ) : (
+              tasks.map((task, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox checked={task.done} onCheckedChange={() => toggleTask(idx)} />
+                    <span className={task.done ? 'line-through text-zinc-500' : 'text-zinc-100'}>{task.text}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => deleteTask(idx)}>
+                    <Trash2 className="w-4 h-4 text-zinc-500 hover:text-red-500 transition" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-    .task.done span {
-      text-decoration: line-through;
-      color: #777;
-    }
-
-    .progress {
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .progress-bar {
-      background: #333;
-      height: 10px;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 0.5rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: limegreen;
-      width: 0%;
-      transition: width 0.3s;
-    }
-  </style>
-</head>
-<body>
-  <h1>My Tasks</h1>
-
-  <div class="input-area">
-    <input type="text" id="taskInput" placeholder="Enter a task..." />
-    <button onclick="addTask()">Add</button>
-  </div>
-
-  <div class="task-list" id="taskList"></div>
-
-  <div class="progress">
-    <div><span id="progressText">0 / 0 completed</span></div>
-    <div class="progress-bar"><div class="progress-fill" id="progressBar"></div></div>
-  </div>
-
-  <script>
-    let tasks = JSON.parse(localStorage.getItem('todo-tasks') || '[]');
-
-    function renderTasks() {
-      const list = document.getElementById('taskList');
-      list.innerHTML = '';
-
-      let doneCount = 0;
-
-      tasks.forEach((task, index) => {
-        const div = document.createElement('div');
-        div.className = 'task' + (task.done ? ' done' : '');
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = task.done;
-        checkbox.onchange = () => toggleTask(index);
-
-        const span = document.createElement('span');
-        span.textContent = task.text;
-
-        div.appendChild(checkbox);
-        div.appendChild(span);
-        list.appendChild(div);
-
-        if (task.done) doneCount++;
-      });
-
-      const total = tasks.length;
-      document.getElementById('progressText').textContent = `${doneCount} / ${total} completed`;
-      document.getElementById('progressBar').style.width = total === 0 ? '0%' : `${(doneCount / total) * 100}%`;
-
-      localStorage.setItem('todo-tasks', JSON.stringify(tasks));
-    }
-
-    function addTask() {
-      const input = document.getElementById('taskInput');
-      const text = input.value.trim();
-      if (text) {
-        tasks.push({ text, done: false });
-        input.value = '';
-        renderTasks();
-      }
-    }
-
-    function toggleTask(index) {
-      tasks[index].done = !tasks[index].done;
-      renderTasks();
-    }
-
-    renderTasks();
-  </script>
-</body>
-</html>
+        <div className="space-y-2">
+          <h2 className="text-lg tracking-wide text-white/80">Progress</h2>
+          <Progress value={progress} className="bg-zinc-800" />
+          <p className="text-sm text-zinc-500 text-right">{completed} / {total} completed</p>
+        </div>
+      </div>
+    </div>
+  );
+}
