@@ -343,6 +343,11 @@
     loadTheme();
     updateTime();
     setInterval(updateTime, 1000);
+
+    document.getElementById('taskInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addTask();
+    });
+
   </script>
 </body>
 </html>
